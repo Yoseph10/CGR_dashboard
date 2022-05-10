@@ -140,23 +140,19 @@ for(name_df in names_df) {
 
 
 #Error rate per encoder and batch  
-df_list <- list(df2, df_andrea, df_edwar)        #put all data frames into list
-#df_list <- list(df2, df_andrea, df_gannen) 
+#df_list <- list(df2, df_andrea, df_edwar)        #put all data frames into list
+df_list <- list(df2, df_andrea, df_edwar, df_gannen) 
 
 data_plot <- df_list %>%
-        reduce(full_join, by='date_batch') %>%  #merge all data frames in list
-        `colnames<-`(c("date_batch", "obs", "error_andrea", "error_edwar")) %>% 
-        mutate(
-                error_rate_andrea <- round( (error_andrea/obs)*100 , 1),
-                error_rate_edwar <- round( (error_edwar/obs)*100 , 1)#,
-                #error_rate_gannen <- round( (error_gannen/obs)*100 , 1)
-        ) 
+        reduce(full_join, by='date_batch') #merge all data frames in list
 
-colnames(data_plot) <- c("date_batch", "obs", "error_andrea", "error_edwar", "error_rate_andrea", "error_rate_edwar" )
+data_plot$error_rate_andrea <- round( (data_plot$error_andrea/data_plot$obs)*100 , 1) 
+data_plot$error_rate_edwar <- round( (data_plot$error_edwar/data_plot$obs)*100 , 1)
+data_plot$error_rate_gannen <- round( (data_plot$error_gannen/data_plot$obs)*100 , 1)
+
 
 ## --- OUTPUT ---- 
 save(data_plot, file = "out/data_plot_claims_21.RData")
-
 
 
 #------------------------------
