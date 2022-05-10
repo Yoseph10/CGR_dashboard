@@ -37,12 +37,21 @@ raw_historical_claims = dbReadTable(conn, "raw_historical_claims")
 raw_historical_claims <- raw_historical_claims %>% slice(-1) 
 
 
+#TODO_: VALIDATE 
+
+# Recategorization for FUR status (dummy)
+raw_historical_claims$FUR_decision <- mutate(raw_historical_claims, FUR_decision =
+                                   case_when(estado_rac == "Calificado" | estado_rac == "Concluido" ~ "Yes",
+                                             estado_rac == "Anulado" | estado_rac == "Derivado" | estado_rac == "En Proceso" | estado_rac == "Pendiente" ~ "No" ) )
+
+# Recategorization for PDE status (dummy)
+raw_historical_claims$PDE_decision<- ifelse(raw_historical_claims$numerohe != "" & (raw_historical_claims$productoaprobado == "Carpeta Atención de Denuncia" | raw_historical_claims$productoaprobado == "Desestimado" | raw_historical_claims$productoaprobado == "En proceso") , "Yes", "No")
+
+
+# Recategorization for CAD status (dummy)
+raw_historical_claims$CAD_decision<- ifelse(raw_historical_claims$numerohe != "" &  raw_historical_claims$productoaprobado == "Carpeta Atención de Denuncia" , "Yes", "No")
+
+
 ## --- OUTPUT ---- 
 save(raw_historical_claims, file = "out/raw_historical_claims.RData")
-
-
-
-
-
-
 
