@@ -1,0 +1,848 @@
+---
+title: "Dashboard de denuncias"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+runtime: shiny
+---
+
+```{css}
+.value-box {
+  height: 100px;
+}
+```
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(shiny)
+#library(haven)
+#library ('plyr')
+library(dplyr)
+#library(tidyverse)
+library(plotly)
+library(reactable)
+library(htmltools)
+library(ggplot2)
+library(viridis)
+```
+
+```{r}
+knitr::opts_chunk$set(fig.width=5, fig.height=3) 
+```
+
+
+```{r, include=FALSE}
+#uploading data
+
+clean_claims_21 <- get(load('out/clean_claims_21.Rdata'))
+raw_claims_feb21 <- get(load('out/raw_claims_feb21.Rdata'))
+raw_historical_claims <- get(load('out/raw_historical_claims.Rdata'))
+
+```
+
+
+```{r, include=FALSE}
+
+## FUNCTION FOR CUSTOMIZING NEXT TABLES
+ 
+# Render a bar chart with a label on the left
+bar_chart <- function(label, width = "100%", height = "14px", fill = "#00bfc4", background = NULL) {
+  bar <- div(style = list(background = fill, width = width, height = height))
+  chart <- div(style = list(flexGrow = 1, marginLeft = "6px", background = background), bar)
+  div(style = list(display = "flex", alignItems = "center"), label, chart)
+}
+```
+
+
+Denuncias 2021
+=====================================  
+
+## Row
+-----------------------------------------------------------------------
+
+### Number of claims {.value-box}
+
+```{r}
+n_claims <- nrow(raw_claims_feb21)
+
+valueBox(value = paste(format(n_claims, big.mark = ","), "", sep = " "), 
+         caption = "Hechos totales",
+         icon = "fa-database",             #https://fontawesome.com/v4/icons/
+         color = "#7636b3")
+```
+
+
+### Number of encoded claims {.value-box}
+
+```{r}
+n_encoded <- nrow(clean_claims_21)
+percent_encoded <- paste( round(n_encoded/n_claims,2)*100, "%")
+
+valueBox(value = paste(format(n_encoded, big.mark = ","), "/", percent_encoded  , sep = " "), 
+         caption = "Hechos codificados",
+         icon = "fa-arrow-circle-up",
+         color = "#a249f5")
+```
+
+
+## Row
+-----------------------------------------------------------------------
+
+
+```{r, include = FALSE}
+##Aprobado, rechazado, pendiente categories
+
+#FUR categories
+FUR_categories_df <- mutate(subset(raw_claims_feb21, FUR_decision == "Yes"), FUR_decision_categories =
+                                   case_when( FUD_decision == "Yes" ~ "Aprobado",
+                                              FUD_decision == "No" & (estado_fur == "No admitido" | estado_fur == "No aceptado a trámite") ~ "Rechazado",
+                                              TRUE  ~ "Pendiente") )
+
+#FUD categories
+FUD_categories_df <- mutate(subset(raw_claims_feb21, FUD_decision == "Yes"), FUD_decision_categories =
+                                   case_when( PDE_decision == "Yes" ~ "Aprobado",
+                                              PDE_decision == "No" & (estado_fud == "Sin atender" | estado_fud == "Devuelto")  ~ "Pendiente",
+                                              TRUE ~ "Rechazado") )
+	
+#PDE categories
+PDE_categories_df  <- mutate(subset(raw_claims_feb21, PDE_decision == "Yes"), PDE_decision_categories =
+                                   case_when( CAD_decision == "Yes" ~ "Aprobado",
+                                              CAD_decision == "No" & producto_aprobado == "En proceso" ~ "Pendiente",
+                                              TRUE ~ "Rechazado") )
+
+```
+
+
+### FUR claims {.value-box}
+
+```{r}
+fur_claims <- sum(raw_claims_feb21$FUR_decision == "Yes")
+percent_fur <-  paste( round(fur_claims/n_claims,2)*100, "%")
+
+valueBox(value = paste(format(fur_claims, big.mark = ","), "/", percent_fur  , sep = " "),
+         caption = "Hechos FUR (respecto a hechos totales)",
+         icon = "fa-folder-open",            
+         color = '#3fc1c9')
+```
+
+### FUD claims {.value-box}
+
+```{r}
+fud_claims <- sum(raw_claims_feb21$FUD_decision == "Yes")
+percent_fud <-  paste( round(fud_claims/n_claims,2)*100, "%")
+
+valueBox(value = paste(format(fud_claims, big.mark = ","), "/", percent_fud  , sep = " "),
+         caption = "Hechos FUD (respecto a hechos totales)",
+         icon = "fa-folder-open",             
+         color = '#3fc1c9')
+```
+
+
+### PDE claims {.value-box}
+
+```{r}
+pde_claims <- sum(raw_claims_feb21$PDE_decision == "Yes")
+percent_pde <-  paste( round(pde_claims/n_claims,2)*100, "%")
+
+valueBox(value = paste(format(pde_claims, big.mark = ","), "/", percent_pde  , sep = " "),
+         caption = "Hechos PDE (respecto a hechos totales)",
+         icon = "fa-folder-open",             
+         color = '#3fc1c9')
+```
+
+
+### CAD claims {.value-box}
+
+```{r}
+cad_claims <- sum(raw_claims_feb21$CAD_decision == "Yes")
+percent_cad <-  paste( round(cad_claims/n_claims,2)*100, "%")
+
+valueBox(value = paste(format(cad_claims, big.mark = ","), "/", percent_cad , sep = " "),
+         caption = "Hechos CAD (respecto a hechos totales)",
+         icon = "fa-folder-open",             
+         color = '#3fc1c9')
+```
+
+
+
+## Row
+-----------------------------------------------------------------------
+
+
+### <b><font face="Arial" size="4px" color="#000000">Estado FUR</font></b>
+
+
+```{r}
+#Donut chart: fur status - categories
+fur_status_df <- as.data.frame(table(FUR_categories_df$FUR_decision_categories))
+
+colnames(fur_status_df) <- c("fur_status", "n")
+ 
+fig <- fur_status_df %>% 
+        plot_ly(labels = ~fur_status, values = ~n, marker = list(colors = c('#00aa7f', '#ccccc7', '#ff0000'))) %>% 
+        add_pie(hole = 0.55, textfont = list(size = 13)) %>% 
+        layout(showlegend = T,
+                xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+
+```
+
+
+### <b><font face="Arial" size="4px" color="#000000">Estado FUD</font></b>
+
+```{r}
+#Donut chart: fud status  - categories
+fud_status_df <- as.data.frame(table(FUD_categories_df$FUD_decision_categories))
+
+colnames(fud_status_df) <- c("fud_status", "n")
+ 
+fig <- fud_status_df %>% 
+        plot_ly(labels = ~fud_status, values = ~n, marker = list(colors = c('#00aa7f', '#ccccc7', '#ff0000'))) %>% 
+        add_pie(hole = 0.55, textfont = list(size = 13)) %>% 
+        layout(showlegend = T,
+                xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+
+```
+
+### <b><font face="Arial" size="4px" color="#000000">Estado PDE</font></b>
+
+```{r}
+#Donut chart: PDE status - categories
+pde_status_df <- as.data.frame(table(PDE_categories_df$PDE_decision_categories))
+
+colnames(pde_status_df) <- c("pde_status", "n")
+ 
+fig <- pde_status_df %>% 
+        plot_ly(labels = ~pde_status, values = ~n, marker = list(colors = c('#00aa7f', '#ccccc7', '#ff0000'))) %>%
+        add_pie(hole = 0.55, textfont = list(size = 13)) %>% 
+        layout(showlegend = T,
+                xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+
+```
+
+
+## Row
+-----------------------------------------------------------------------
+
+
+### <b><font face="Arial" size="4px" color="#000000">Hechos codificados: valores faltantes</font></b>
+
+```{r, include = FALSE}
+
+#dataframe with two columns: variable and number of missings
+df_missings_claims_21 <- get(load('out/df_missings_claims_21.Rdata'))
+```
+
+```{r}
+
+tbl <- reactable(
+  df_missings,
+  pagination = TRUE,
+  defaultSorted = "percentage_missing",
+  defaultColDef = colDef(headerClass = "header", align = "left"),
+  columns = list(
+    variable = colDef(name = "Variable codificada"
+ 
+    ),
+    n_missings = colDef(
+      name = "N° de valores faltantes",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        width <- paste0(value * 100 / max(df_missings$n_missing), "%")
+        # Add thousands separators
+        value <- format(value, big.mark = ",")
+        bar_chart(value, width = width, fill = "#39a7ad")
+      },
+      # And left-align the columns
+      align = "left"
+    ),
+    percentage_missing = colDef(
+      name = "% de valores faltantes",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+        bar_chart(value, width = value, fill = "#ff0000", background = "#e1e1e1")
+      },
+      # And left-align the columns
+      align = "left"
+    )
+  )
+)
+
+tbl
+
+```
+
+
+### <b><font face="Arial" size="4px" color="#000000">Hechos codificados: tasa de error por codificador</font></b>  
+
+
+```{r, include=FALSE}
+### Create a plot with error rate per encoder (Andrea/Edwar) (x axis is for number of batch, y for the error rate)
+
+data_plot <- get(load('out/data_plot_claims_21.Rdata'))
+```
+
+
+```{r}
+#barplot: a plot with error rate per encoder (Andrea/Edwar)
+fig <- plot_ly(data_plot, x = ~date_batch, y = ~error_rate_andrea, type = 'bar',  name = 'Andrea',
+                marker = list(color = '#ccccc7') ) %>% 
+                add_trace(y = ~error_rate_edwar, name = 'Edwar',  marker = list(color = '#00aa7f') ) %>% 
+                add_trace(y = ~error_rate_gannen, name = 'Gannen',  marker = list(color = '#cca1ed') ) %>% 
+                layout(title = "",
+                 xaxis = list(title = "Fecha del batch",
+                              zeroline = FALSE),
+                 yaxis = list(title = "Tasa de error (%)",
+                              zeroline = FALSE))
+
+fig
+```
+
+
+## Row
+-----------------------------------------------------------------------
+
+### <b><font face="Arial" size="4px" color="#000000">Hechos codificados: hechos por departamento - estadísticos</font></b>  
+
+
+```{r, include=FALSE}
+
+hechos_dep_census <- get(load('out/hechos_dep_census_claims_21.Rdata'))
+
+```
+
+```{r}
+
+tbl <- reactable(
+  hechos_dep_census[,c("departamento", "n", "percentage", "N_dpt_claims100Kpop")],
+  pagination = TRUE,
+  defaultSorted = "n",
+  defaultColDef = colDef(headerClass = "header", align = "left"),
+  columns = list(
+    departamento = colDef(name = "departamento"
+ 
+    ),
+    n = colDef(
+      name = "N° de hechos",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        width <- paste0(value * 100 / max(hechos_dep_census$n), "%")
+        # Add thousands separators
+        value <- format(value, big.mark = ",")
+        bar_chart(value, width = width, fill = "#3fc1c9")
+      },
+      # And left-align the columns
+      align = "left"
+    ),
+    percentage = colDef(
+      name = "Porcentaje",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+        bar_chart(value, width = value, fill = "#fc5185", background = "#e1e1e1")
+      },
+      # And left-align the columns
+      align = "left"
+    ),
+    N_dpt_claims100Kpop = colDef(
+      name = "N° de hechos por 100 mil habitantes",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        width <- paste0(value * 100 / max(hechos_dep_census$N_dpt_claims100Kpop), "%")
+        # Add thousands separators
+        value <- format(value, big.mark = ",")
+        bar_chart(value, width = width, fill = "#00aa7f")
+      },
+      # And left-align the columns
+      align = "left"
+    )
+  )
+)
+
+
+tbl
+```
+
+
+
+### <b><font face="Arial" size="4px" color="#000000">Hechos codificados: hechos por 100 mil habitantes por departamento - mapa</font></b>  
+
+
+```{r, include=FALSE}
+
+departamentos_fortified_ <- get(load('out/departamentos_fortified_claims_21.Rdata'))
+
+```
+
+
+```{r}
+#map plot
+dep_plot <- ggplot() +
+        geom_polygon(data = departamentos_fortified_, aes(fill = N_dpt_claims100Kpop, x = long, y = lat, group = group), colour= "gray", size=0.05, alpha=0.9) +
+        theme_void() +
+        scale_fill_viridis(option = 'D',  direction = -1, trans = "log2",  name="N° de hechos") +
+        #scale_fill_viridis(option = 'D', trans = "log2",  breaks = trans_breaks("log2", function(x) 2^x), name="N° de hechos") +
+        theme(  
+                text = element_text(size= 7, color = "#22211d"),
+                
+                plot.title = element_text(size= 14, hjust=0.01, color = "black", margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm")),
+                plot.subtitle = element_text(size= 12, hjust=0.01, color = "#4e4d47", margin = margin(b = -0.1, t = 0.43, l = 2, unit = "cm")),
+                plot.caption = element_text( size=10, color = "black", margin = margin(b = 0.3, r=-99, unit = "cm") ),
+        ) +
+        coord_map()
+
+dep_plot
+```
+
+
+
+
+## Row
+-----------------------------------------------------------------------
+
+```{r, include=FALSE}
+
+corruption_claims_count <- get(load('out/corruption_claims_count_claims_21.Rdata'))
+
+```
+
+
+### <b><font face="Arial" size="4px" color="#000000">Hechos codificados: hechos de corrupción</font></b>  
+
+```{r}
+max = sum(corruption_claims_count$n)
+
+gauge(corruption_claims_count$n[corruption_claims_count$corruption_denunc == 1], min = 0, max = max , gaugeSectors(
+  success = c(round((2/3)*max) + 1 , max ), warning = c(round(max/3) + 1, round((2/3)*max) ), danger = c(0, round(max/3) ))
+  , abbreviate = FALSE, abbreviateDecimals = 1)
+```
+
+
+### <b><font face="Arial" size="4px" color="#000000">Hechos codificados: hechos de corrupción (%)</font></b>  
+
+
+```{r}
+gauge(corruption_claims_count$percentage[corruption_claims_count$corruption_denunc == 1], min = 0, max = 100, symbol = '%', gaugeSectors(
+  success = c(80, 100), warning = c(40, 79), danger = c(0, 39)
+))
+```
+
+
+
+## Row
+-----------------------------------------------------------------------
+
+
+### <b><font face="Arial" size="4px" color="#000000">Hechos codificados: hechos de corrupción por departamento - estadísticos</font></b>  
+
+```{r}
+
+corruption_dep_census <- get(load('out/corruption_dep_census_claims_21.Rdata'))
+
+```
+
+```{r}
+
+tbl <- reactable(
+  corruption_dep_census[,c("departamento", "n", "percentage", "N_dpt_claims100Kpop_corruption")],
+  pagination = TRUE,
+  defaultSorted = "n",
+  defaultColDef = colDef(headerClass = "header", align = "left"),
+  columns = list(
+    departamento = colDef(name = "departamento"
+ 
+    ),
+    n = colDef(
+      name = "N° de hechos",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        width <- paste0(value * 100 / max(corruption_dep_census$n), "%")
+        # Add thousands separators
+        value <- format(value, big.mark = ",")
+        bar_chart(value, width = width, fill = "#3fc1c9")
+      },
+      # And left-align the columns
+      align = "left"
+    ),
+    percentage = colDef(
+      name = "Porcentaje",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+        bar_chart(value, width = value, fill = "#fc5185", background = "#e1e1e1")
+      },
+      # And left-align the columns
+      align = "left"
+    ),
+    N_dpt_claims100Kpop_corruption = colDef(
+      name = "N° de hechos por 100 mil habitantes",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        width <- paste0(value * 100 / max(corruption_dep_census$N_dpt_claims100Kpop), "%")
+        # Add thousands separators
+        value <- format(value, big.mark = ",")
+        bar_chart(value, width = width, fill = "#00aa7f")
+      },
+      # And left-align the columns
+      align = "left"
+    )
+  )
+)
+
+
+
+tbl
+```
+
+
+
+### <b><font face="Arial" size="4px" color="#000000">Hechos codificados: hechos de corrupción por 100 mil habitantes por departamento - mapa</font></b>  
+
+
+```{r}
+#map plot
+dep_plot <- ggplot() +
+        geom_polygon(data = departamentos_fortified_, aes(fill = N_dpt_claims100Kpop_corruption, x = long, y = lat, group = group), colour= "gray", size=0.05, alpha=0.9) +
+        theme_void() +
+        scale_fill_viridis(option = 'D',  direction = -1, trans = "log2",  name="N° de hechos") +
+        #scale_fill_viridis(option = 'D', trans = "log2",  breaks = trans_breaks("log2", function(x) 2^x), name="N° de hechos") +
+        theme(  
+                text = element_text(size= 7, color = "#22211d"),
+                
+                plot.title = element_text(size= 14, hjust=0.01, color = "black", margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm")),
+                plot.subtitle = element_text(size= 12, hjust=0.01, color = "#4e4d47", margin = margin(b = -0.1, t = 0.43, l = 2, unit = "cm")),
+                plot.caption = element_text( size=10, color = "black", margin = margin(b = 0.3, r=-99, unit = "cm") ),
+        ) +
+        coord_map()
+
+dep_plot
+```
+
+
+
+## Row
+-----------------------------------------------------------------------
+
+```{r, include=FALSE}
+
+claims_21 <- get(load('out/claims_21.Rdata'))
+
+```
+
+### <b><font face="Arial" size="4px" color="#000000">Hechos por entidad</font></b>  
+
+```{r}
+type_entity_count <- get(load('out/type_entity_count_claims_21.Rdata'))
+
+```
+
+```{r}
+tbl <- reactable(
+  type_entity_count,
+  pagination = TRUE,
+  defaultSorted = "n",
+  defaultColDef = colDef(headerClass = "header", align = "left"),
+  columns = list(
+    TIPO_DE_ENTIDAD = colDef(name = "Tipo de entidad", width = 180),
+    n = colDef(
+      name = "N° de hechos",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        width <- paste0(value * 100 / max(type_entity_count$n), "%")
+        # Add thousands separators
+        value <- format(value, big.mark = ",")
+        bar_chart(value, width = width, fill = "#3fc1c9")
+      },
+      # And left-align the columns
+      align = "left"
+    ),
+    percentage = colDef(
+      name = "Porcentaje",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+        bar_chart(value, width = value, fill = "#fc5185", background = "#e1e1e1")
+      },
+      # And left-align the columns
+      align = "left"
+    ),
+    n_hec = colDef(
+      name = "HEC", width = 60,
+      cell = function(value) {
+      # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+      }),
+    n_fur = colDef(
+      name = "FUR", width = 60,
+      cell = function(value) {
+      # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+      }),
+    n_fud = colDef(
+      name = "FUD", width = 60,
+      cell = function(value) {
+      # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+      }),
+    n_pde = colDef(
+      name = "PDE", width = 60,
+      cell = function(value) {
+      # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+      }),
+    n_cad = colDef(
+      name = "CAD", width = 60,
+      cell = function(value) {
+      # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+      })
+  )
+)
+
+tbl
+```
+
+
+### <b><font face="Arial" size="4px" color="#000000">Hechos por tipología primaria</font></b>  
+
+
+
+```{r}
+#ME QUEDE ACAAAAAAAAAAA
+
+
+# number and percentage of denuncias per type of primary class
+primary_class_count <- subset(clean_claims_21, tipo_denuncia_primario_homologado!= "" ) %>% 
+                         count(tipo_denuncia_primario_homologado, sort = TRUE) 
+
+primary_class_count$percentage <- round( (primary_class_count$n/sum(primary_class_count$n) )*100, 1)
+
+
+tbl <- reactable(
+  primary_class_count,
+  pagination = TRUE,
+  defaultSorted = "n",
+  defaultColDef = colDef(headerClass = "header", align = "left"),
+  columns = list(
+    tipo_denuncia_primario_homologado = colDef(name = "Tipo de denuncia"
+ 
+    ),
+    n = colDef(
+      name = "N° de hechos",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        width <- paste0(value * 100 / max(primary_class_count$n), "%")
+        # Add thousands separators
+        value <- format(value, big.mark = ",")
+        bar_chart(value, width = width, fill = "#3fc1c9")
+      },
+      # And left-align the columns
+      align = "left"
+    ),
+    percentage = colDef(
+      name = "Porcentaje",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+        bar_chart(value, width = value, fill = "#fc5185", background = "#e1e1e1")
+      },
+      # And left-align the columns
+      align = "left"
+    )
+  )
+)
+
+tbl
+```
+
+
+
+## Row
+-----------------------------------------------------------------------
+
+
+### <b><font face="Arial" size="4px" color="#000000">Hechos por unidad orgánica del analista</font></b>  
+
+
+```{r}
+
+uo_ara_count <- subset(raw_claims_feb21, uo_ara!= "" ) %>%
+  group_by(uo_ara) %>%
+  summarise(
+    n = n(),
+    percentage = NaN,
+    n_hec = sum(FUR_decision == "No" & FUD_decision == "No" & PDE_decision == "No" & CAD_decision == "No"),
+    n_fur = sum(FUR_decision == "Yes" & FUD_decision == "No" & PDE_decision == "No" & CAD_decision == "No"),
+    n_fud = sum(FUD_decision == "Yes" & PDE_decision == "No" & CAD_decision == "No" ),
+    n_pde = sum(PDE_decision == "Yes" & CAD_decision == "No"),
+    n_cad = sum(CAD_decision == "Yes"),
+  )
+
+uo_ara_count$percentage <- round( (uo_ara_count$n/sum(uo_ara_count$n) )*100, 1)
+uo_ara_count$n_hec <- round( (uo_ara_count$n_hec/uo_ara_count$n )*100, 1)
+uo_ara_count$n_fur <- round( (uo_ara_count$n_fur/uo_ara_count$n )*100, 1)
+uo_ara_count$n_fud <- round( (uo_ara_count$n_fud/uo_ara_count$n )*100, 1)
+uo_ara_count$n_pde <- round( (uo_ara_count$n_pde/uo_ara_count$n )*100, 1)
+uo_ara_count$n_cad <- round( (uo_ara_count$n_cad/uo_ara_count$n )*100, 1)
+
+
+tbl <- reactable(
+  uo_ara_count,
+  pagination = TRUE,
+  defaultSorted = "n",
+  defaultColDef = colDef(headerClass = "header", align = "left"),
+  columns = list(
+    uo_ara = colDef(name = "Unidad Orgánica", width = 180),
+    n = colDef(
+      name = "N° de hechos",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        width <- paste0(value * 100 / max(uo_ara_count$n), "%")
+        # Add thousands separators
+        value <- format(value, big.mark = ",")
+        bar_chart(value, width = width, fill = "#3fc1c9")
+      },
+      # And left-align the columns
+      align = "left"
+    ),
+    percentage = colDef(
+      name = "Porcentaje",
+      defaultSortOrder = "desc",
+      # Render the bar charts using a custom cell render function
+      cell = function(value) {
+        # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+        bar_chart(value, width = value, fill = "#fc5185", background = "#e1e1e1")
+      },
+      # And left-align the columns
+      align = "left"
+    ),
+    n_hec = colDef(
+      name = "HEC", width = 60,
+      cell = function(value) {
+      # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+      }),
+    n_fur = colDef(
+      name = "FUR", width = 60,
+      cell = function(value) {
+      # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+      }),
+    n_fud = colDef(
+      name = "FUD", width = 60,
+      cell = function(value) {
+      # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+      }),
+    n_pde = colDef(
+      name = "PDE", width = 60,
+      cell = function(value) {
+      # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+      }),
+    n_cad = colDef(
+      name = "CAD", width = 60,
+      cell = function(value) {
+      # Format as percentages with 1 decimal place
+        value <- paste0(format(value , nsmall = 1), "%")
+      })
+  )
+)
+
+tbl
+```
+
+
+
+Denuncias históricas
+=====================================  
+
+
+Column {.sidebar data-width=200}
+-----------------------------------------------------------------------
+
+```{r}
+selectInput("year_selection", label = "Selecciona el año", choices = c("Todos los años", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020"))
+
+```
+
+
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Number of claims {.value-box}
+
+```{r}
+
+renderValueBox({
+        
+        #creating n_claims_historical variable
+        if (input$year_selection == "Todos los años") {
+                n_claims_historical <- nrow(raw_historical_claims)
+
+        } else {
+                n_claims_historical <- nrow(subset(raw_historical_claims, year== input$year_selection ))
+
+        }
+
+
+valueBox(value = paste(format(n_claims_historical, big.mark = ","), "", sep = " "), 
+         caption = "Hechos totales",
+         icon = "fa-database",             #https://fontawesome.com/v4/icons/
+         color = "#7636b3")
+})
+
+
+```
+
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+
+
+
+
+
+
