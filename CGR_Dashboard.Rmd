@@ -829,18 +829,113 @@ valueBox(value = paste(format(n_claims_historical, big.mark = ","), "", sep = " 
 Column {data-width=400}
 -----------------------------------------------------------------------
 
-### Chart B
+
+### FUR claims {.value-box}
 
 ```{r}
+renderValueBox({
+        
+        if (input$year_selection == "Todos los años") {
+                fur_claims <- sum(raw_historical_claims$FUR_decision == "Yes")
+                
+                n_claims_historical <- nrow(raw_historical_claims)
+                percent_fur <-  paste( round(fur_claims/n_claims_historical,2)*100, "%")
+
+        } else {
+                #dataframe with specific year
+                raw_historical_year <- subset(raw_historical_claims, year== input$year_selection)
+                
+                fur_claims <- sum(raw_historical_year$FUR_decision == "Yes")
+                
+                n_claims_historical <- nrow(raw_historical_year)
+                percent_fur <-  paste( round(fur_claims/n_claims_historical,2)*100, "%")
+
+        }
+
+valueBox(value = paste(format(fur_claims, big.mark = ","), "/", percent_fur  , sep = " "),
+         caption = "Hechos FUR (respecto a hechos totales)",
+         icon = "fa-folder-open",            
+         color = '#3fc1c9')
+})
 
 ```
 
-### Chart C
+
+### PDE claims {.value-box}
 
 ```{r}
 
+renderValueBox({
+        
+        if (input$year_selection == "Todos los años") {
+                pde_claims <- sum(raw_historical_claims$PDE_decision == "Yes")
+                
+                n_claims_historical <- nrow(raw_historical_claims)
+                percent_pde <-  paste( round(pde_claims/n_claims_historical,2)*100, "%")
+
+        } else {
+                raw_historical_year <- subset(raw_historical_claims, year== input$year_selection)
+                
+                pde_claims <- sum(raw_historical_year$PDE_decision == "Yes")
+                
+                n_claims_historical <- nrow(raw_historical_year)
+                percent_pde <-  paste( round(pde_claims/n_claims_historical,2)*100, "%")
+
+        }
+
+valueBox(value = paste(format(pde_claims, big.mark = ","), "/", percent_pde  , sep = " "),
+         caption = "Hechos PDE (respecto a hechos totales)",
+         icon = "fa-folder-open",             
+         color = '#3fc1c9')
+})
 ```
 
+
+### CAD claims {.value-box}
+
+```{r}
+
+renderValueBox({
+        
+        if (input$year_selection == "Todos los años") {
+                cad_claims <- sum(raw_historical_claims$CAD_decision == "Yes")
+                
+                n_claims_historical <- nrow(raw_historical_claims)
+                percent_cad <-  paste( round(cad_claims/n_claims_historical,2)*100, "%")
+
+        } else {
+                raw_historical_year <- subset(raw_historical_claims, year== input$year_selection)
+                
+                cad_claims <- sum(raw_historical_year$CAD_decision == "Yes")
+                
+                n_claims_historical <- nrow(raw_historical_year)
+                percent_cad <-  paste( round(cad_claims/n_claims_historical,2)*100, "%")
+
+        }
+
+valueBox(value = paste(format(cad_claims, big.mark = ","), "/", percent_cad , sep = " "),
+         caption = "Hechos CAD (respecto a hechos totales)",
+         icon = "fa-folder-open",             
+         color = '#3fc1c9')
+})
+```
+
+
+
+```{r, include = FALSE}
+##Aprobado, rechazado, pendiente categories
+
+# dado que son varios años y esto estaría bueno hacerlo en el script CGR_claims_historical
+# de allí en este script se filtraría según año
+
+#FUR categories
+
+#FUD categories
+
+#PDE categories
+
+
+```
 
 
 
