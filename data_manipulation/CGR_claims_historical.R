@@ -31,7 +31,9 @@ conn <- dbConnect(
 
 ## --- INPUT ---- 
 # import historical claims table 
-raw_historical_claims = dbReadTable(conn, "raw_historical_claims")
+#raw_historical_claims = dbReadTable(conn, "raw_historical_claims")
+
+raw_historical_claims = read_stata('C:/BID_Columbia/raw_historical_claims.dta')
 
 #drop first observation
 raw_historical_claims <- raw_historical_claims %>% slice(-1) 
@@ -45,7 +47,7 @@ raw_historical_claims$FUR_decision <- mutate(raw_historical_claims, FUR_decision
                                              estado_rac == "Anulado" | estado_rac == "Derivado" | estado_rac == "En Proceso" | estado_rac == "Pendiente" ~ "No" ) )
 
 # Recategorization for PDE status (dummy)
-raw_historical_claims$PDE_decision<- ifelse(raw_historical_claims$numerohe != "" & (raw_historical_claims$productoaprobado == "Carpeta Atención de Denuncia" | raw_historical_claims$productoaprobado == "Desestimado" | raw_historical_claims$productoaprobado == "En proceso") , "Yes", "No")
+raw_historical_claims$PDE_decision<- ifelse(raw_historical_claims$numerohe != "" & raw_historical_claims$productoaprobado != "" , "Yes", "No")
 
 
 # Recategorization for CAD status (dummy)
@@ -54,4 +56,32 @@ raw_historical_claims$CAD_decision<- ifelse(raw_historical_claims$numerohe != ""
 
 ## --- OUTPUT ---- 
 save(raw_historical_claims, file = "out/raw_historical_claims.RData")
+
+
+#------------------------------
+# Output: PDE_categories_df table
+#------------------------------
+
+##Aprobado, rechazado, pendiente categories
+
+#FUR categories
+#FUR_categories_df <- mutate(subset(raw_historical_claims, FUR_decision == "Yes"), FUR_decision_categories =
+#                                    case_when( PDE_decision == "Yes" ~ "Aprobado",
+#                                               PDE_decision == "No" & (estado_pde == "No admitido" | estado_pde == "No aceptado a trámite") ~ "Rechazado",
+#                                               TRUE  ~ "Pendiente") )
+
+#PDE categories
+PDE_categories_df  <- mutate(subset(raw_historical_claims, PDE_decision == "Yes"), PDE_decision_categories =
+                                     case_when( CAD_decision == "Yes" ~ "Aprobado",
+                                                CAD_decision == "No" & productoaprobado == "En proceso" ~ "Pendiente",
+                                                TRUE ~ "Rechazado") )
+
+PDE_categories_df <- PDE_categories_df %>% select(year,PDE_decision_categories)
+
+## --- OUTPUT ---- 
+save(PDE_categories_df, file = "out/PDE_categories_df_historical.RData")
+
+
+
+
 
