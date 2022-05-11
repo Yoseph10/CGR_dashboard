@@ -33,6 +33,11 @@ knitr::opts_chunk$set(fig.width=5, fig.height=3)
 
 
 ```{r, include=FALSE}
+#ACOTAR LAS TABLAS A SOLO LAS COLUMNAS QUE EFECTIVAMENTE SE USAN
+```
+
+
+```{r, include=FALSE}
 #uploading data
 
 clean_claims_21 <- get(load('out/clean_claims_21.Rdata'))
@@ -921,21 +926,46 @@ valueBox(value = paste(format(cad_claims, big.mark = ","), "/", percent_cad , se
 ```
 
 
-
-```{r, include = FALSE}
-##Aprobado, rechazado, pendiente categories
-
-# dado que son varios años y esto estaría bueno hacerlo en el script CGR_claims_historical
-# de allí en este script se filtraría según año
-
-#FUR categories
-
-#FUD categories
-
-#PDE categories
+Column {data-width=400}
+-----------------------------------------------------------------------
 
 
+### <b><font face="Arial" size="4px" color="#000000">Estado PDE</font></b>
+
+```{r}
+
+renderPlotly({
+        
+        PDE_categories_historical <- get(load('out/PDE_categories_df_historical.Rdata'))
+        
+        if (input$year_selection == "Todos los años") {
+                
+                pde_status_df <- as.data.frame(table(PDE_categories_historical$PDE_decision_categories))
+                colnames(pde_status_df) <- c("pde_status", "n")
+
+        } else {
+                
+                PDE_categories_historical <- subset(PDE_categories_historical, year== input$year_selection)
+                
+                pde_status_df <- as.data.frame(table(PDE_categories_historical$PDE_decision_categories))
+                colnames(pde_status_df) <- c("pde_status", "n")
+        } 
+        
+        fig <- pde_status_df %>% 
+        plot_ly(labels = ~pde_status, values = ~n, marker = list(colors = c('#00aa7f', '#ccccc7', '#ff0000'))) %>%
+        add_pie(hole = 0.55, textfont = list(size = 13)) %>% 
+        layout(showlegend = T,
+                xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+        
+
+        fig
+        
+
+  })
 ```
+
+
 
 
 
