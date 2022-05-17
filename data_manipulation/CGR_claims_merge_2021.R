@@ -34,25 +34,64 @@ conn <- dbConnect(
 raw_claims_feb21 = dbReadTable(conn, "raw_claims_feb21")
 
 
-# Recategorization for fur status (dummy)
-raw_claims_feb21 <- mutate(raw_claims_feb21, FUR_decision =
-                                case_when(estado_hec == "Calificado" | estado_hec == "Concluido" ~ "Yes",
-                                        estado_hec == "Anulado" | estado_hec == "En Proceso" | estado_hec == "Pendiente" ~ "No" ) )
-        
-# Recategorization for fud status (dummy)
-raw_claims_feb21$FUD_decision<- ifelse(raw_claims_feb21$FUR_decision == "Yes" & raw_claims_feb21$numero_fud != "", "Yes", "No")
-        
-        
-# Recategorization for PDE status (dummy)
-raw_claims_feb21$PDE_decision<- ifelse(raw_claims_feb21$numero_he != "" & (raw_claims_feb21$producto_aprobado == "Carpeta Atención de Denuncia" | raw_claims_feb21$producto_aprobado == "Desestimado" | raw_claims_feb21$producto_aprobado == "En proceso") , "Yes", "No")
-        
-        
-# Recategorization for CAD status (dummy)
-raw_claims_feb21$CAD_decision<- ifelse(raw_claims_feb21$numero_he != "" &  raw_claims_feb21$producto_aprobado == "Carpeta Atención de Denuncia" , "Yes", "No")
+# Recategorization for fur, fud, pde, cad status (dummy)
+raw_claims_feb21 <- raw_claims_feb21 %>%  mutate(FUR_decision =
+                                                case_when(estado_hec == "Calificado" | estado_hec == "Concluido" ~ "Yes",
+                                                          estado_hec == "Anulado" | estado_hec == "En Proceso" | estado_hec == "Pendiente" ~ "No" ) ) %>% 
+                                          mutate(FUD_decision =
+                                                 case_when(FUR_decision == "Yes" & numero_fud != "" ~ "Yes",
+                                                           TRUE ~ "No" ) ) %>% 
+                                          mutate(PDE_decision =
+                                                 case_when(FUD_decision == "Yes" & numero_he != "" & 
+                                                           (producto_aprobado == "Carpeta Atención de Denuncia" | producto_aprobado == "Desestimado" |producto_aprobado == "En proceso") ~ "Yes",
+                                                           TRUE ~ "No" ) ) %>% 
+                                          mutate(CAD_decision =
+                                                 case_when(PDE_decision == "Yes" & producto_aprobado == "Carpeta Atención de Denuncia" ~ "Yes",
+                                                           TRUE ~ "No" ) ) 
+  
+
+## --- OUTPUT ---- 
+write.csv(raw_claims_feb21, file = "out/raw_claims_feb21.csv", row.names = FALSE)
+
+
+#------------------------------
+# Output: raw_claims_feb21 table for dashboard
+#------------------------------
+
+raw_claims_feb21_dash <- raw_claims_feb21 %>% select(FUR_decision, estado_fur, FUD_decision, estado_fud, 
+                                                     PDE_decision, CAD_decision, producto_aprobado)
+
+## --- OUTPUT ---- 
+write.csv(raw_claims_feb21_dash, file = "out/raw_claims_feb21_dash.csv", row.names = FALSE)
+
+
+
+#------------------------------
+# Output: df uo_ara_count 2021
+#------------------------------
+
+uo_ara_count <- subset(raw_claims_feb21, uo_ara!= "" ) %>%
+        group_by(uo_ara) %>%
+        summarise(
+                n = n(),
+                percentage = NaN,
+                n_hec = sum(FUR_decision == "No" & FUD_decision == "No" & PDE_decision == "No" & CAD_decision == "No"),
+                n_fur = sum(FUR_decision == "Yes" & FUD_decision == "No" & PDE_decision == "No" & CAD_decision == "No"),
+                n_fud = sum(FUD_decision == "Yes" & PDE_decision == "No" & CAD_decision == "No" ),
+                n_pde = sum(PDE_decision == "Yes" & CAD_decision == "No"),
+                n_cad = sum(CAD_decision == "Yes"),
+        )  %>%
+        mutate( percentage = round( (n/sum(n) )*100, 1),
+                n_hec = round( (n_hec/n )*100, 1),
+                n_fur = round( (n_fur/n )*100, 1),
+                n_fud = round( (n_fud/n )*100, 1),
+                n_pde = round( (n_pde/n )*100, 1),
+                n_cad = round( (n_cad/n )*100, 1)
+        )
 
 
 ## --- OUTPUT ---- 
-save(raw_claims_feb21, file = "out/raw_claims_feb21.RData")
+write.csv(uo_ara_count, file = "out/uo_ara_count_claims_21.csv", row.names = FALSE)
 
 
 #------------------------------
@@ -61,7 +100,7 @@ save(raw_claims_feb21, file = "out/raw_claims_feb21.RData")
 
 ## --- INPUT ---- 
 # import clean_claims_21 table 
-clean_claims_21 <- get(load('out/clean_claims_21.Rdata'))
+clean_claims_21 <- get(load('out/clean_claims_21.csv'))
 
 
 ## MERGE RAW_CLAIMS_FEB21 & CLEAN_CLAIMS_21
@@ -107,7 +146,7 @@ raw_claims_feb21_ch$expediente <- sub("^0+", "", raw_claims_feb21_ch$expediente)
 claims_21 <- merge(x = raw_claims_feb21_ch, y = clean_claims_21_ch, by = c("expediente", "fur", "numero_hec", "numero_hecho", "numero_fud"), all.x = TRUE)
 
 ## --- OUTPUT ---- 
-save(claims_21, file = "out/claims_21.RData")
+write.csv(claims_21, file = "out/claims_21.csv", row.names = FALSE)
 
 
 #------------------------------
@@ -154,7 +193,8 @@ type_entity_count$n_cad <- round( (type_entity_count$n_cad/type_entity_count$n )
 
 
 ## --- OUTPUT ---- 
-save(type_entity_count, file = "out/type_entity_count_claims_21.RData")
+write.csv(type_entity_count, file = "out/type_entity_count_claims_21.csv", row.names = FALSE)
+
 
 
 
