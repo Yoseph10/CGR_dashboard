@@ -44,7 +44,18 @@ clean_claims_21[ clean_claims_21 == "NAN" | clean_claims_21 == "nan" |  clean_cl
 
 
 ## --- OUTPUT ---- 
-save(clean_claims_21, file = "out/clean_claims_21.RData")
+write.csv(clean_claims_21, file = "out/clean_claims_21.csv", row.names = FALSE)
+
+
+#------------------------------
+# Output: clean claims table for dashboard
+#------------------------------
+
+clean_claims_21_dash <- clean_claims_21 %>% select(expediente)
+
+
+## --- OUTPUT ---- 
+write.csv(clean_claims_21_dash, file = "out/clean_claims_21_dash.csv", row.names = FALSE)
 
 
 #------------------------------
@@ -58,7 +69,7 @@ colnames(df_missings) <- c("variable", "n_missings")
 df_missings$percentage_missing = round( (df_missings$n_missings/ nrow(clean_claims_21))*100 , 1)
 
 ## --- OUTPUT ---- 
-save(df_missings, file = "out/df_missings_claims_21.RData")
+write.csv(df_missings, file = "out/df_missings_claims_21.csv", row.names = FALSE)
 
 
 #------------------------------
@@ -152,7 +163,7 @@ data_plot$error_rate_gannen <- round( (data_plot$error_gannen/data_plot$obs)*100
 
 
 ## --- OUTPUT ---- 
-save(data_plot, file = "out/data_plot_claims_21.RData")
+write.csv(data_plot, file = "out/data_plot_claims_21.csv", row.names = FALSE)
 
 
 #------------------------------
@@ -196,7 +207,7 @@ hechos_dep_census$N_dpt_claims100Kpop <- round( hechos_dep_census$n/(hechos_dep_
 
 
 ## --- OUTPUT ---- 
-save(hechos_dep_census, file = "out/hechos_dep_census_claims_21.RData")
+write.csv(hechos_dep_census, file = "out/hechos_dep_census_claims_21.csv", row.names = FALSE)
 
 
 #------------------------------
@@ -235,7 +246,7 @@ departamentos_fortified_ <-merge(x = departamentos_fortified, y = hechos_dep_cen
 
 
 ## --- OUTPUT ---- 
-#save(departamentos_fortified_, file = "out/departamentos_fortified_claims_21.RData")
+#write.csv(departamentos_fortified_, file = "out/departamentos_fortified_claims_21.csv")
 
 
 
@@ -261,7 +272,7 @@ corruption_claims_count$percentage <- round( (corruption_claims_count$n/sum(corr
 
 
 ## --- OUTPUT ---- 
-save(corruption_claims_count, file = "out/corruption_claims_count_claims_21.RData")
+write.csv(corruption_claims_count, file = "out/corruption_claims_count_claims_21.csv", row.names = FALSE)
 
 
 #------------------------------
@@ -303,7 +314,7 @@ corruption_dep_census$N_dpt_claims100Kpop_corruption <- round( corruption_dep_ce
 
 
 ## --- OUTPUT ---- 
-save(corruption_dep_census, file = "out/corruption_dep_census_claims_21.RData")
+write.csv(corruption_dep_census, file = "out/corruption_dep_census_claims_21.csv", row.names = FALSE)
 
 
 #------------------------------
@@ -319,7 +330,21 @@ departamentos_fortified_ <-merge(x = departamentos_fortified_, y = corruption_de
 
 
 ## --- OUTPUT ---- 
-save(departamentos_fortified_, file = "out/departamentos_fortified_claims_21.RData")
+write.csv(departamentos_fortified_, file = "out/departamentos_fortified_claims_21.csv", row.names = FALSE)
 
+
+
+#------------------------------
+# Output: df for primary tipology
+#-----------------------------
+
+# number and percentage of denuncias per type of primary class
+primary_class_count <- subset(clean_claims_21, tipo_denuncia_primario_homologado!= "" ) %>% 
+        count(tipo_denuncia_primario_homologado, sort = TRUE) %>% 
+        mutate( percentage = round( (n/sum(n) )*100, 1))
+
+
+## --- OUTPUT ---- 
+write.csv(primary_class_count, file = "out/primary_class_count_claims_21.csv", row.names = FALSE)
 
 
