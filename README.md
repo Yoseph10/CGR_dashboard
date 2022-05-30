@@ -8,8 +8,9 @@
 
 ### Structure of the repository 
 - This repository has 2 scripts and 1 folder.
-- CGR Dashboard shinydashboard: Version of the dashboard using shinydashboard R package. This version is faster and looks better.
-- CGR Dashboard AWS: Version of the dashboard using flexdashboard R package. 
+- CGR Dashboard shinydashboard | Script: Version of the dashboard using shinydashboard R package. This version is faster and looks better.
+- CGR Dashboard AWS | Script: Version of the dashboard using flexdashboard R package. 
+- Data manipulation | folder: it contains three R scripts which procces, clean and manipulate datasets provided by the CGR. Some of those datasets are imported from an Amazon Web Server. 
 
 ### Temporal output
 - The shinydashboard is located [here](https://cglmjx-yoseph10.shinyapps.io/cgr_dashboard_shinydashboard/) 
