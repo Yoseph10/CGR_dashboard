@@ -47,17 +47,15 @@ for( i in 1:ncol(raw_historical_claims)){
 
 
 # Recategorization for FUR/FUD/PDE/CAD
-raw_historical_claims <- raw_historical_claims %>% 
-                                mutate(FUR_decision = case_when(estado_rac != "Anulado" | estado_rac != "Derivado" ~ "Yes",
-                                                                TRUE ~ "No" )) %>% 
-                                mutate(FUD_decision = case_when(FUR_decision == "Yes" & estadofcero == "Asociado"  ~ "Yes",
-                                                                TRUE ~ "No" )) %>% 
-                                mutate(PDE_decision = case_when(productopropuesto=="Carpeta Atención de Denuncia" | productopropuesto=="Control simultáneo" |
-                                                                productopropuesto=="Alerta control" ~ "Yes",
-                                                                TRUE ~ "No")) %>% 
-                                mutate(CAD_decision = case_when(productoaprobado=="Carpeta Atención de Denuncia" | productoaprobado=="Control simultáneo" |
-                                                                productoaprobado=="Alerta control" ~ "Yes",
-                                                                TRUE ~ "No"))
+raw_historical_claims$FUR_decision = ifelse(raw_historical_claims$estado_rac != "Anulado" & raw_historical_claims$estado_rac != "Derivado", "Yes", "No" )
+
+raw_historical_claims$FUD_decision = ifelse(raw_historical_claims$FUR_decision == "Yes" & raw_historical_claims$estadofcero == "Asociado" ,"Yes", "No" )
+
+raw_historical_claims$PDE_decision = ifelse(raw_historical_claims$productopropuesto=="Carpeta Atención de Denuncia" | raw_historical_claims$productopropuesto=="Control simultáneo" |
+                                            raw_historical_claims$productopropuesto=="Alerta control", "Yes", "No")
+
+raw_historical_claims$CAD_decision = ifelse(raw_historical_claims$productoaprobado=="Carpeta Atención de Denuncia" | raw_historical_claims$productoaprobado=="Control simultáneo" |
+                                            raw_historical_claims$productoaprobado=="Alerta control", "Yes", "No")
                                      
                                             
 ## --- OUTPUT ---- 
