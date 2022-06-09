@@ -32,40 +32,34 @@ setwd("C:/Users/Yoseph/Documents/GitHub/CGR_dashboard")
 ## --- INPUT ---- 
 # import historical claims table 
 #raw_historical_claims = dbReadTable(conn, "raw_historical_claims")
-raw_historical_claims = read_stata("data/raw_historical_claims.dta")
-raw_historical_claims = raw_historical_claims %>% slice(-1)
-
-#TODO_: VALIDATE 
-
-# Recategorization for FUR status (dummy)
-raw_historical_claims <- mutate(raw_historical_claims, FUR_decision =
-                                   case_when(estado_rac == "Calificado" | estado_rac == "Concluido" ~ "Yes",
-                                             estado_rac == "Anulado" | estado_rac == "Derivado" | estado_rac == "En Proceso" | estado_rac == "Pendiente" ~ "No" ) )
-
-# Recategorization for PDE status (dummy)
-raw_historical_claims$PDE_decision<- ifelse(raw_historical_claims$numerohe != "" & raw_historical_claims$productoaprobado != "" , "Yes", "No")
 
 
-# Recategorization for CAD status (dummy)
-raw_historical_claims$CAD_decision<- ifelse(raw_historical_claims$numerohe != "" &  raw_historical_claims$productoaprobado == "Carpeta Atención de Denuncia" , "Yes", "No")
+raw_historical_claims = read_stata("data/updated_historical_claims.dta")
+
+# column names from upper to lower case
+for( i in 1:ncol(raw_historical_claims)){
+        colnames(raw_historical_claims)[i] <- tolower(colnames(raw_historical_claims)[i])
+}
 
 
+#raw_historical_claims = read_stata("data/raw_historical_claims.dta")
+#raw_historical_claims = raw_historical_claims %>% slice(-1)
 
-#Claims' status
-raw_historical_claims  <- mutate(raw_historical_claims,
-                                     accept_claim =
-                                     case_when( estado_hecho == "A.T. c/subsanación" | estado_hecho == "Aceptado a trámite" | estado_hecho == "Admitido" |
-                                                estado_hecho == "Trámite de oficio" | estado_hecho == "T.O. c/subsanación" | estado_hecho == "Verificado"  ~ "Aceptado",
-                                                
-                                                estado_hecho == "Derivado" ~ "Derivado",
-                                                
-                                                estado_hecho == "Concluir Ini. Cont. Simultáneo" | estado_hecho == "Desestimado" | estado_hecho ==  "Desvirtuado" |
-                                                estado_hecho ==  "Devuelto" | estado_hecho == "En subsanación" | estado_hecho == "Insubsanable" | estado_hecho == "Materia no denunciable" |
-                                                estado_hecho == "No aceptado a trámite" | estado_hecho == "No admitido" ~ "Rechazado",  
-                                                
-                                                estado_hecho == "En evaluación" | estado_hecho == "Pendiente"  | estado_hecho == "Por derivar" ~ "Pendiente" ) )                                            
+
+# Recategorization for FUR/FUD/PDE/CAD
+raw_historical_claims <- raw_historical_claims %>% 
+                                mutate(FUR_decision = case_when(estado_rac != "Anulado" | estado_rac != "Derivado" ~ "Yes",
+                                                                TRUE ~ "No" )) %>% 
+                                mutate(FUD_decision = case_when(FUR_decision == "Yes" & estadofcero == "Asociado"  ~ "Yes",
+                                                                TRUE ~ "No" )) %>% 
+                                mutate(PDE_decision = case_when(productopropuesto=="Carpeta Atención de Denuncia" | productopropuesto=="Control simultáneo" |
+                                                                productopropuesto=="Alerta control" ~ "Yes",
+                                                                TRUE ~ "No")) %>% 
+                                mutate(CAD_decision = case_when(productoaprobado=="Carpeta Atención de Denuncia" | productoaprobado=="Control simultáneo" |
+                                                                productoaprobado=="Alerta control" ~ "Yes",
+                                                                TRUE ~ "No"))
+                                     
                                             
-
 ## --- OUTPUT ---- 
 write.csv(raw_historical_claims, file = "out/raw_historical_claims.csv", row.names = FALSE)
 
@@ -75,7 +69,7 @@ write.csv(raw_historical_claims, file = "out/raw_historical_claims.csv", row.nam
 #------------------------------
 
 #raw_historical_claims_dash <- raw_historical_claims %>% select(annio_sicgr, accept_claim, tipo_de_entidad, tipodedenuncia_primario, uo_ara)
-raw_historical_claims_dash <- raw_historical_claims %>% select(year, accept_claim, tipo_de_entidad, tipodedenuncia_primario, uo_ara, FUR_decision, PDE_decision, CAD_decision )
+raw_historical_claims_dash <- raw_historical_claims %>% select(year, tipo_de_entidad, tipodedenuncia_primario, uo_ara, FUR_decision, FUD_decision, PDE_decision, CAD_decision )
 
 ## --- OUTPUT ---- 
 write.csv(raw_historical_claims_dash, file = "out/raw_historical_claims_dash.csv", row.names = FALSE)
