@@ -36,14 +36,14 @@ setwd("C:/Users/Yoseph/Documents/GitHub/CGR_dashboard")
 
 raw_historical_claims = read_stata("data/updated_historical_claims.dta")
 
+
 # column names from upper to lower case
 for( i in 1:ncol(raw_historical_claims)){
         colnames(raw_historical_claims)[i] <- tolower(colnames(raw_historical_claims)[i])
 }
 
-
-#raw_historical_claims = read_stata("data/raw_historical_claims.dta")
-#raw_historical_claims = raw_historical_claims %>% slice(-1)
+#delete duplicate columns
+raw_historical_claims = raw_historical_claims[, !duplicated(colnames(raw_historical_claims))]
 
 
 # Recategorization for FUR/FUD/PDE/CAD
