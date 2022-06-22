@@ -100,7 +100,13 @@ write.csv(uo_ara_count, file = "out/uo_ara_count_claims_21.csv", row.names = FAL
 
 ## --- INPUT ---- 
 # import clean_claims_21 table 
-clean_claims_21 <- get(load('out/clean_claims_21.csv'))
+clean_claims_21 = dbReadTable(conn, "clean_claims_21")
+
+#keep the last version
+clean_claims_21 <- clean_claims_21[ clean_claims_21$version == max(clean_claims_21$version), ]
+
+#Cleaning data
+clean_claims_21[ clean_claims_21 == "NAN" | clean_claims_21 == "nan" |  clean_claims_21 == "." |  clean_claims_21 == "," ] <- ""
 
 
 ## MERGE RAW_CLAIMS_FEB21 & CLEAN_CLAIMS_21
