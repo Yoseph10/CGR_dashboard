@@ -31,8 +31,8 @@ conn <- dbConnect(
 
 ## --- INPUT ---- 
 # import clean claims 21 table 
-#clean_claims_21 = dbReadTable(conn, "clean_claims_21")
-clean_claims_21 = dbReadTable(conn, "claims_21_dataset_algoritmo")
+clean_claims_21 = dbReadTable(conn, "clean_claims_21")
+#clean_claims_21 = dbReadTable(conn, "claims_21_dataset_algoritmo")
 
 
 #keep the last version
@@ -255,13 +255,13 @@ departamentos_fortified_ <-merge(x = departamentos_fortified, y = hechos_dep_cen
 #-----------------------------
 
 # creating a variable that identifies corruption claims
-clean_claims_21$corruption_denunc<- ifelse(clean_claims_21$tipo_denuncia_primario_homologado=='lucro ilegal'|
-                                                   clean_claims_21$tipo_denuncia_primario_homologado=='uso inapropiado de recursos no finacieros'| 
-                                                   clean_claims_21$tipo_denuncia_primario_homologado== 'favoritismo' |
-                                                   clean_claims_21$tipo_denuncia_primario_homologado== 'colusion'| 
-                                                   clean_claims_21$tipo_denuncia_primario_homologado== 'abuso de autoridad o extorsion', 1, 0)
+clean_claims_21$corruption_denunc<- ifelse(clean_claims_21$tipo_denuncia_primario_14_clases=='LUCRO ILEGAL'|
+                                                   clean_claims_21$tipo_denuncia_primario_14_clases=='USO INAPROPIADO DE RECURSOS NO FINACIEROS'| 
+                                                   clean_claims_21$tipo_denuncia_primario_14_clases== 'FAVORITISMO' |
+                                                   clean_claims_21$tipo_denuncia_primario_14_clases== 'COLUSION' | 
+                                                   clean_claims_21$tipo_denuncia_primario_14_clases== 'ABUSO DE AUTORIDAD O EXTORSION', 1, 0)
 
-#clean_claims_21$corruption_denunc<- ifelse(clean_claims_21$tipo_denuncia_primario_homologado=='', '', clean_claims_21$corruption_denunc)
+#clean_claims_21$corruption_denunc<- ifelse(clean_claims_21$tipo_denuncia_primario_14_clases=='', '', clean_claims_21$corruption_denunc)
 
 
 # number and percentage of corruption claims 
@@ -339,8 +339,8 @@ write.csv(departamentos_fortified_, file = "out/departamentos_fortified_claims_2
 #-----------------------------
 
 # number and percentage of denuncias per type of primary class
-primary_class_count <- subset(clean_claims_21, tipo_denuncia_primario_homologado!= "" ) %>% 
-        count(tipo_denuncia_primario_homologado, sort = TRUE) %>% 
+primary_class_count <- subset(clean_claims_21, tipo_denuncia_primario_14_clases!= "" ) %>% 
+        count(tipo_denuncia_primario_14_clases, sort = TRUE) %>% 
         mutate( percentage = round( (n/sum(n) )*100, 1))
 
 
